@@ -1,6 +1,6 @@
 # Athena++
 
-Athena++ is a strophysical magnetohydrodynamics (MHD) code using C++. Our project focused on the the interaction between a planet and the accretion disk. Thus most of our changes comes from the `disk.cpp` in `pgen`. Orginally, `disk.cpp` contains only an revolving accretion disk. We then modified different initial conditions, including velocity, pressure, density distribution, etc.
+Athena++ is a strophysical magnetohydrodynamics (MHD) code using C++. Our project focused on the the interaction between a planet and the accretion disk. Thus most of our changes comes from the `disk.cpp` in `pgen`(and the corresponding input file`athinput.disk_cyl`). Orginally, `disk.cpp` contains only an revolving accretion disk. We then modified different initial conditions, including velocity, pressure, density distribution, etc.
 
 Besides initial conditions, in the `EnrollUserExplicitSourceFunction` we added our source function to investigate the interaction, including interaction between the disk and planet, Leapforg integrator for updating position of planet and cooling function at last.
 
