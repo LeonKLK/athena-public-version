@@ -6,7 +6,7 @@ Besides initial conditions, in the `EnrollUserExplicitSourceFunction` we added o
 
 If you have any questions regarding my code, feel free to ask me!
 
-Remark: I DON'T OWN THIS CODE. Athena++ is developed by Professor James Stone and his remarkable team. If you have any question regarding the performance of the code or any other problems unrelated to my above changes, please ask them in their Github directly. Thank you.
+Remark: I DON'T OWN THIS CODE. Athena++ is developed by a remarkable team in Princeton University. If you have any questions regarding the performance of the code or any other problems unrelated to my above changes, please ask them in their Github directly. Thank you.
 
 
 
