@@ -112,8 +112,8 @@ void Mesh::InitUserMeshData(ParameterInput *pin) {
   final_mass_P = pin->GetOrAddReal("problem", "final_mass_P", 1.0)/1047.35; //in the unit of solar mass(from jupiter mass)
   vr_P = 0.0;
   vphi_P = sqrt(gm0/r_P);
-  acc1_P = -gm0/pow(r_P,2);
-  acc2_P = 0;
+  acc1_P = -gm0/pow(r_P,2.0);
+  acc2_P = 0.0;
 
   dt_step = 1;
   rk = pin->GetOrAddReal("problem", "rk", 1);
@@ -251,7 +251,7 @@ Real DenProfileCyl(const Real rad, const Real phi, const Real z) {
 
 Real PoverR(const Real rad, const Real phi, const Real z) {
   Real poverr;
-  poverr = p0_over_r0*std::pow(rad/r0, -1)/gamma_gas;
+  poverr = p0_over_r0*std::pow(rad/r0, -1.0)/gamma_gas;
   return poverr;
 }
 
@@ -261,7 +261,7 @@ Real PoverR(const Real rad, const Real phi, const Real z) {
 void VelProfileCyl(const Real rad, const Real phi, const Real z,
                    Real &v1, Real &v2, Real &v3){
   Real vel;
-  vel = std::sqrt(gm0/rad + (p0_over_r0/gamma_gas)*(-pslope)*std::pow(rad/r0 , -1));
+  vel = std::sqrt(gm0/rad + (p0_over_r0/gamma_gas)*(-pslope)*std::pow(rad/r0 , -1.0));
   if (std::strcmp(COORDINATE_SYSTEM, "cylindrical") == 0) {
     v1=0.0;
     v2=vel;
@@ -282,8 +282,8 @@ void Planet_and_Cooling(MeshBlock *pmb, const Real time, const Real dt,
   Real src1_P, src2_P;
   Real accx, accy, accx_P, accy_P;
 
-  Real r_P_cube = std::pow(1.0,3); //initial r_P in cube
-  Real time_P = 2*M_PI*std::pow(r_P_cube/gm0 , 0.5); //period of planet
+  Real r_P_cube = std::pow(1.0,3.0); //initial r_P in cube
+  Real time_P = 2.0*M_PI*std::pow(r_P_cube/gm0 , 0.5); //period of planet
   AthenaArray<Real> vol(pmb->ncells1);
 
   if (time < time_P) {
@@ -293,8 +293,8 @@ void Planet_and_Cooling(MeshBlock *pmb, const Real time, const Real dt,
       mass_P = final_mass_P;
   }
 
-  acc1_P = -gm0/pow(r_P,2);
-  acc2_P = 0;
+  acc1_P = -gm0/pow(r_P,2.0);
+  acc2_P = 0.0;
 
   for (int k=pmb->ks; k<=pmb->ke; ++k) {
 // #pragma omp parallel for schedule(static)
@@ -306,12 +306,15 @@ void Planet_and_Cooling(MeshBlock *pmb, const Real time, const Real dt,
         Real rad, phi, z;
         GetCylCoord(pmb->pcoord,rad,phi,z,i,j,k);
         Real theta = phi - phi_P; // rel. location of the planet
+        if (theta < 0.0) {
+            theta += 2.0*M_PI;
+        }
         //calculate the force on disk element
-        soft = 0.6*r_P*std::pow(mass_P/(3*mass_S),1.0/3); // soft = k*R_H
+        soft = 0.6*r_P*std::pow(mass_P/(3.0*mass_S),1.0/3.0); // soft = k*R_H
         //dist is the distance between planet and each disk element
         Real dist = std::sqrt(rad*rad + r_P*r_P - 2.0*rad*r_P*std::cos(theta));
         // distance to the planet with soften parameter in the G-potential
-        Real dist_soft = std::sqrt(rad*rad + r_P*r_P - 2.0*rad*r_P*std::cos(theta) + std::pow(soft,2));
+        Real dist_soft = std::sqrt(rad*rad + r_P*r_P - 2.0*rad*r_P*std::cos(theta) + std::pow(soft,2.0));
         // angle opposite to rad(radius of disk element w.r.p. to sun)
         Real alpha = std::acos((r_P*r_P+dist*dist-rad*rad)/(2.0*dist*r_P));
         // accound for the direction below x-axis for accy
@@ -322,7 +325,7 @@ void Planet_and_Cooling(MeshBlock *pmb, const Real time, const Real dt,
         // projection on the vector r
         // for r so far away, force at x-dir is +ve, for r very small, force at x-dir is-ve
         // vector_dist dot unit_vector x
-        accx = mass_P/std::pow(dist_soft,3.0)*(dist*cos(2*M_PI-alpha));
+        accx = mass_P/std::pow(dist_soft,3.0)*(dist*cos(2.0*M_PI-alpha));
         // vector_dist dot unit_vector y
         accy = mass_P/std::pow(dist_soft,3.0)*(dist*cos(1.5*M_PI-alpha));
         // rotate the force back to the cylindrical coordinate
@@ -333,14 +336,15 @@ void Planet_and_Cooling(MeshBlock *pmb, const Real time, const Real dt,
         src1 = dt*den*acc1;
         src2 = dt*den*acc2;
         // update
+        //cons(IEN,k,j,i) += 0.5*(SQR(src1)+SQR(src2))/den;
+        cons(IEN,k,j,i) += (0.5/den)*(2.0*cons(IM1,k,j,i)*src1+SQR(src1)+2.0*cons(IM2,k,j,i)*src2+SQR(src2));
         cons(IM1,k,j,i) += src1;
         cons(IM2,k,j,i) += src2;
-        cons(IEN,k,j,i) += 0.5*(SQR(src1)+SQR(src2))/den;
 
         // calculate the force on planet
         //notice that the direction of vector dist is reversed, so we don't need a -ve sign in front of acc_P
-        soft_in = 1 - std::exp(-dist*dist/std::pow(soft,2));
-        accx_P = -den*vol(i)/std::pow(dist_soft,3.0)*(dist*cos(2*M_PI-alpha));
+        soft_in = 1.0 - std::exp(-dist*dist/std::pow(soft,2.0));
+        accx_P = -den*vol(i)/std::pow(dist_soft,3.0)*(dist*cos(2.0*M_PI-alpha));
         accy_P = -den*vol(i)/std::pow(dist_soft,3.0)*(dist*cos(1.5*M_PI-alpha)); //*vol(i)
         acc1_P += soft_in*accx_P;
         acc2_P += soft_in*accy_P;
@@ -374,6 +378,7 @@ void Planet_and_Cooling(MeshBlock *pmb, const Real time, const Real dt,
       old_v_x = vr_P*cos(phi_P) - vphi_P*sin(phi_P);
       old_v_y = vr_P*sin(phi_P) + vphi_P*cos(phi_P);
 
+      //x-y axis(fix)
       a_x = acc1_P*cos(phi_P) - acc2_P*sin(phi_P);
       a_y = acc1_P*sin(phi_P) + acc2_P*cos(phi_P);
 
@@ -401,8 +406,8 @@ void Planet_and_Cooling(MeshBlock *pmb, const Real time, const Real dt,
       r_P = sqrt(r_x*r_x + r_y*r_y);
       phi_P = std::atan2(r_y, r_x);
 
-      if (phi_P < 0) {
-          phi_P += 2*M_PI;
+      if (phi_P < 0.0) {
+          phi_P += 2.0*M_PI;
       }
 
       vr_P = v_x*cos(phi_P) + v_y*sin(phi_P);
@@ -473,15 +478,15 @@ void Planet_and_Cooling(MeshBlock *pmb, const Real time, const Real dt,
               Real den = prim(IDN,k,j,i);
               Real poverr;
               omega = prim(IVY,k,j,i)/rad;
-              tau_r = 2*M_PI*tau/omega;
-              poverr = p0_over_r0*std::pow(rad/r0, -1)/gamma_gas;
+              tau_r = 2.0*M_PI*tau/omega;
+              poverr = p0_over_r0*std::pow(rad/r0,-1.0)/gamma_gas;
               Real new_pres = prim(IPR,k,j,i) - dt/tau_r*(prim(IPR,k,j,i) - poverr*den);
-              cons(IEN,k,j,i) += (new_pres - prim(IPR,k,j,i))/(gamma_gas-1);
+              // Real a;
+              // a= (new_pres - prim(IPR,k,j,i))/prim(IPR,k,j,i);
+              cons(IEN,k,j,i) += (new_pres - prim(IPR,k,j,i))/(gamma_gas - 1.0);
               // cons(IEN,k,j,i) = new_pres/(gamma_gas-1);
               // cons(IEN,k,j,i) += 0.5*(SQR(cons(IM1,k,j,i))+SQR(cons(IM2,k,j,i)))/den;
-
               // cons(IEN,k,j,i) += 0.5*den*(SQR(prim(IVX,k,j,i))+SQR(prim(IVY,k,j,i)));
-
               // cons(IEN,k,j,i) += (-dt/tau_r*(cons(IEN,k,j,i)*(gamma_gas-1)-poverr*den))/(gamma_gas-1);
           }
       }
